@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaHeart, FaShoppingCart, FaTag } from 'react-icons/fa';
+import { FaHeart, FaShoppingCart, FaTag, FaEye, FaStar, FaBolt } from 'react-icons/fa';
 
 const ProductCard = ({ product, onAddToCart }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
   const {
     id,
     name,
@@ -11,10 +14,10 @@ const ProductCard = ({ product, onAddToCart }) => {
     description,
     inStock,
     discount,
-    category
+    category,
+    isNewCollection // Nueva propiedad para Colección 2025
   } = product;
 
-  // Calcular precio con descuento
   const finalPrice = discount > 0 ? price * (1 - discount / 100) : price;
 
   const handleAddToCartClick = (e) => {
@@ -28,103 +31,157 @@ const ProductCard = ({ product, onAddToCart }) => {
   const handleFavoriteClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Aquí iría la lógica para agregar a favoritos
-    alert('Agregado a favoritos');
+    setIsFavorite(!isFavorite);
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
+    <div 
+      className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-slate-100 hover:border-indigo-300"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <Link to={`/product/${id}`} className="block">
         {/* Imagen del producto */}
-        <div className="relative">
-          <div className="h-64 bg-gray-200 overflow-hidden">
-            <img 
-              src={image} 
-              alt={name}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-              onError={(e) => {
-                e.target.src = 'https://images.pexels.com/photos/996329/pexels-photo-996329.jpeg?auto=compress&cs=tinysrgb&w=600';
-              }}
-            />
-          </div>
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 h-80">
+          <img 
+            src={image} 
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+            onError={(e) => {
+              e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&fit=crop';
+            }}
+          />
           
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col space-y-2">
-            {discount > 0 && (
-              <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                <FaTag className="text-xs" />
-                -{discount}%
-              </span>
+          {/* Overlay oscuro en hover */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/20 to-transparent transition-opacity duration-300 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`} />
+          
+          {/* Badges superiores */}
+          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+            {/* Badge Colección 2025 */}
+            {isNewCollection && (
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5">
+                <FaBolt className="text-xs" />
+                2025
+              </div>
             )}
+            
+            {/* Badge Descuento */}
+            {discount > 0 && (
+              <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 animate-pulse">
+                <FaTag className="text-xs" />
+                -{discount}% OFF
+              </div>
+            )}
+            
+            {/* Badge Agotado */}
             {!inStock && (
-              <span className="bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+              <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
                 Agotado
-              </span>
+              </div>
             )}
           </div>
 
-          {/* Botón rápido de favoritos */}
+          {/* Botón de favoritos */}
           <button 
-            className="absolute top-3 right-3 bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors"
+            className={`absolute top-4 right-4 w-11 h-11 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center z-10 ${
+              isFavorite 
+                ? 'bg-gradient-to-r from-red-500 to-pink-500 scale-110 shadow-red-500/50' 
+                : 'bg-white/90 backdrop-blur-sm hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:scale-110'
+            }`}
             onClick={handleFavoriteClick}
           >
-            <FaHeart className="text-gray-400 hover:text-red-500 transition-colors" />
+            <FaHeart className={`text-lg transition-colors ${
+              isFavorite ? 'text-white' : 'text-slate-600 group-hover:text-white'
+            }`} />
           </button>
+
+          {/* Quick view en hover */}
+          <div className={`absolute inset-x-0 bottom-0 p-4 transform transition-all duration-300 ${
+            isHovered ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+          }`}>
+            <Link
+              to={`/product/${id}`}
+              className="w-full bg-white/95 backdrop-blur-md hover:bg-white text-slate-900 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xl border border-slate-200"
+            >
+              <FaEye />
+              Vista Rápida
+            </Link>
+          </div>
         </div>
 
         {/* Información del producto */}
-        <div className="p-4">
-          {/* Categoría */}
-          <span className="text-xs text-gray-500 uppercase font-semibold">
-            {category}
-          </span>
+        <div className="p-5">
+          {/* Categoría y Rating */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-indigo-600 uppercase font-bold tracking-wider bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+              {category}
+            </span>
+            <div className="flex items-center gap-1 text-yellow-500">
+              <FaStar className="text-sm" />
+              <span className="text-xs font-bold text-slate-700">4.8</span>
+            </div>
+          </div>
 
           {/* Nombre */}
-          <h3 className="text-lg font-semibold text-gray-800 mt-1 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
+          <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors min-h-[3.5rem]">
             {name}
           </h3>
 
           {/* Descripción */}
-          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+          <p className="text-slate-600 text-sm mb-4 line-clamp-2 leading-relaxed">
             {description}
           </p>
 
           {/* Precio */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-end justify-between mb-4">
+            <div>
               {discount > 0 ? (
-                <>
-                  <span className="text-2xl font-bold text-gray-800">
+                <div className="flex flex-col">
+                  <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                     ${finalPrice.toFixed(2)}
                   </span>
-                  <span className="text-lg text-gray-500 line-through">
+                  <span className="text-sm text-slate-500 line-through">
                     ${price.toFixed(2)}
                   </span>
-                </>
+                </div>
               ) : (
-                <span className="text-2xl font-bold text-gray-800">
+                <span className="text-2xl font-black text-slate-900">
                   ${price.toFixed(2)}
                 </span>
               )}
             </div>
+            {discount > 0 && (
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                Ahorra ${(price - finalPrice).toFixed(2)}
+              </div>
+            )}
           </div>
         </div>
       </Link>
 
       {/* Botón de agregar al carrito */}
-      <div className="px-4 pb-4">
+      <div className="px-5 pb-5">
         <button
           onClick={handleAddToCartClick}
           disabled={!inStock}
-          className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`w-full py-3.5 px-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
             inStock
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-2xl hover:scale-105 active:scale-95'
+              : 'bg-slate-200 text-slate-500 cursor-not-allowed'
           }`}
         >
-          <FaShoppingCart className="text-sm" />
-          {inStock ? 'Agregar al Carrito' : 'Agotado'}
+          <FaShoppingCart className="text-lg" />
+          {inStock ? 'Agregar al Carrito' : 'No Disponible'}
         </button>
+      </div>
+
+      {/* Brillo decorativo */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+        <div className={`absolute -top-full left-0 w-full h-full bg-gradient-to-b from-white/30 to-transparent transform transition-transform duration-1000 ${
+          isHovered ? 'translate-y-full' : ''
+        }`} />
       </div>
     </div>
   );
