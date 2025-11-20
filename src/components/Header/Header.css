@@ -1,0 +1,16 @@
+/* Estilos adicionales específicos para Header */
+.header-sticky {
+  backdrop-filter: blur(10px);
+}
+
+/* Transiciones suaves para el menú móvil */
+.mobile-menu-enter {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+
+.mobile-menu-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: all 0.3s ease;
+}

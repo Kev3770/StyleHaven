@@ -1,0 +1,9 @@
+/* Estilos adicionales específicos para Footer */
+.footer-newsletter input:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.social-icon:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
