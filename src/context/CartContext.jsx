@@ -1,7 +1,20 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 
-// Crear el contexto
 const CartContext = createContext();
+
+// 🔥 MEJORA 1: Cargar estado inicial desde localStorage
+const loadCartFromStorage = () => {
+  try {
+    const savedCart = localStorage.getItem('stylehaven-cart');
+    if (savedCart) {
+      const parsed = JSON.parse(savedCart);
+      return calculateTotals(parsed);
+    }
+  } catch (error) {
+    console.error('Error loading cart:', error);
+  }
+  return initialState;
+};
 
 // Estado inicial del carrito
 const initialState = {
@@ -17,7 +30,25 @@ const CART_ACTIONS = {
   REMOVE_ITEM: 'REMOVE_ITEM',
   UPDATE_QUANTITY: 'UPDATE_QUANTITY',
   CLEAR_CART: 'CLEAR_CART',
-  TOGGLE_CART: 'TOGGLE_CART'
+  TOGGLE_CART: 'TOGGLE_CART',
+  LOAD_CART: 'LOAD_CART'
+};
+
+// Función helper para calcular totales
+const calculateTotals = (state) => {
+  const itemCount = state.items.reduce((total, item) => total + item.quantity, 0);
+  const total = state.items.reduce((sum, item) => {
+    const price = item.discount > 0 
+      ? item.price * (1 - item.discount / 100) 
+      : item.price;
+    return sum + (price * item.quantity);
+  }, 0);
+
+  return {
+    ...state,
+    itemCount,
+    total: parseFloat(total.toFixed(2))
+  };
 };
 
 // Reducer para manejar las acciones del carrito
@@ -31,14 +62,12 @@ const cartReducer = (state, action) => {
       let newItems;
       
       if (existingItemIndex >= 0) {
-        // Si el item ya existe, aumentar la cantidad
         newItems = state.items.map((item, index) =>
           index === existingItemIndex
             ? { ...item, quantity: item.quantity + action.payload.quantity }
             : item
         );
       } else {
-        // Si es un item nuevo, agregarlo
         newItems = [...state.items, action.payload];
       }
 
@@ -68,47 +97,56 @@ const cartReducer = (state, action) => {
     case CART_ACTIONS.TOGGLE_CART:
       return { ...state, isOpen: !state.isOpen };
 
+    case CART_ACTIONS.LOAD_CART:
+      return action.payload;
+
     default:
       return state;
   }
 };
 
-// Función helper para calcular totales
-const calculateTotals = (state) => {
-  const itemCount = state.items.reduce((total, item) => total + item.quantity, 0);
-  const total = state.items.reduce((sum, item) => {
-    const price = item.discount > 0 
-      ? item.price * (1 - item.discount / 100) 
-      : item.price;
-    return sum + (price * item.quantity);
-  }, 0);
-
-  return {
-    ...state,
-    itemCount,
-    total: parseFloat(total.toFixed(2))
-  };
-};
-
 // Proveedor del contexto
 export const CartProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [state, dispatch] = useReducer(cartReducer, initialState, loadCartFromStorage);
 
-  // Acciones
+  // 🔥 MEJORA 2: Guardar en localStorage cada vez que cambie el carrito
+  useEffect(() => {
+    try {
+      localStorage.setItem('stylehaven-cart', JSON.stringify({
+        items: state.items,
+        total: state.total,
+        itemCount: state.itemCount,
+        isOpen: false // No guardar el estado de apertura
+      }));
+    } catch (error) {
+      console.error('Error saving cart:', error);
+    }
+  }, [state.items, state.total, state.itemCount]);
+
+  // Acciones mejoradas
   const addToCart = (product, size = 'M', quantity = 1) => {
+    // 🔥 MEJORA 3: Validación antes de agregar
+    if (!product.inStock) {
+      console.warn('Producto agotado');
+      return { success: false, message: 'Producto agotado' };
+    }
+
     dispatch({
       type: CART_ACTIONS.ADD_ITEM,
       payload: {
         id: product.id,
         name: product.name,
         price: product.price,
-        discount: product.discount,
+        discount: product.discount || 0,
         image: product.image,
+        category: product.category,
         size,
         quantity,
         maxStock: 10
       }
     });
+
+    return { success: true, message: 'Producto agregado al carrito' };
   };
 
   const removeFromCart = (productId, size) => {
@@ -119,6 +157,13 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = (productId, size, quantity) => {
+    // 🔥 MEJORA 4: Validación de cantidad
+    if (quantity < 0) return;
+    if (quantity > 10) {
+      console.warn('Cantidad máxima: 10');
+      return;
+    }
+
     dispatch({
       type: CART_ACTIONS.UPDATE_QUANTITY,
       payload: { id: productId, size, quantity }
@@ -126,11 +171,24 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = () => {
-    dispatch({ type: CART_ACTIONS.CLEAR_CART });
+    if (window.confirm('¿Estás seguro de vaciar el carrito?')) {
+      dispatch({ type: CART_ACTIONS.CLEAR_CART });
+      return true;
+    }
+    return false;
   };
 
   const toggleCart = () => {
     dispatch({ type: CART_ACTIONS.TOGGLE_CART });
+  };
+
+  // 🔥 MEJORA 5: Métodos útiles adicionales
+  const getCartItem = (productId, size) => {
+    return state.items.find(item => item.id === productId && item.size === size);
+  };
+
+  const isInCart = (productId, size) => {
+    return state.items.some(item => item.id === productId && item.size === size);
   };
 
   const value = {
@@ -145,7 +203,11 @@ export const CartProvider = ({ children }) => {
     removeFromCart,
     updateQuantity,
     clearCart,
-    toggleCart
+    toggleCart,
+    
+    // Utilidades
+    getCartItem,
+    isInCart
   };
 
   return (

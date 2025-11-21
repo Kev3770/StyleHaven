@@ -1,5 +1,6 @@
 import React from 'react';
-import { useCart } from '../../hooks/useCart';
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext'; // 🔥 NUEVO
 import Modal from '../common/Modal/Modal';
 import Button from '../common/Button/Button';
 import { FaTrash, FaPlus, FaMinus, FaShoppingCart, FaShoppingBag, FaTimes, FaTag, FaArrowRight } from 'react-icons/fa';
@@ -15,13 +16,39 @@ const Cart = () => {
     updateQuantity,
     clearCart 
   } = useCart();
+  
+  const toast = useToast(); // 🔥 NUEVO: Hook de notificaciones
 
-  const handleQuantityChange = (productId, size, newQuantity) => {
+  const handleQuantityChange = (productId, size, newQuantity, productName) => {
     if (newQuantity === 0) {
       removeFromCart(productId, size);
+      toast.removedFromCart(productName); // 🔥 NUEVO: Notificación
     } else {
       updateQuantity(productId, size, newQuantity);
+      toast.info(`Cantidad actualizada: ${newQuantity}`); // 🔥 NUEVO: Notificación
     }
+  };
+
+  // 🔥 NUEVO: Manejar eliminación con notificación
+  const handleRemoveItem = (productId, size, productName) => {
+    removeFromCart(productId, size);
+    toast.removedFromCart(productName);
+  };
+
+  // 🔥 NUEVO: Manejar vaciar carrito con notificación
+  const handleClearCart = () => {
+    if (clearCart()) {
+      toast.cartCleared();
+    }
+  };
+
+  // 🔥 NUEVO: Manejar checkout con notificación
+  const handleCheckout = () => {
+    toast.success('¡Proceso de compra iniciado! Redirigiendo al checkout...');
+    // Aquí irá la lógica real de checkout
+    setTimeout(() => {
+      toggleCart();
+    }, 1500);
   };
 
   const calculateDiscount = (item) => {
@@ -118,7 +145,7 @@ const Cart = () => {
                             </p>
                           </div>
                           <button
-                            onClick={() => removeFromCart(item.id, item.size)}
+                            onClick={() => handleRemoveItem(item.id, item.size, item.name)} // 🔥 ACTUALIZADO
                             className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
                             title="Eliminar producto"
                           >
@@ -148,14 +175,14 @@ const Cart = () => {
                           {/* Controles de cantidad */}
                           <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
                             <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1)}
+                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity - 1, item.name)} // 🔥 ACTUALIZADO
                               className="w-7 h-7 rounded-full bg-white hover:bg-gradient-to-r hover:from-indigo-600 hover:to-purple-600 hover:text-white flex items-center justify-center transition-all shadow-sm"
                             >
                               <FaMinus className="text-xs" />
                             </button>
                             <span className="w-8 text-center font-bold text-gray-900">{item.quantity}</span>
                             <button
-                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1)}
+                              onClick={() => handleQuantityChange(item.id, item.size, item.quantity + 1, item.name)} // 🔥 ACTUALIZADO
                               className="w-7 h-7 rounded-full bg-white hover:bg-gradient-to-r hover:from-indigo-600 hover:to-purple-600 hover:text-white flex items-center justify-center transition-all shadow-sm"
                             >
                               <FaPlus className="text-xs" />
@@ -205,10 +232,7 @@ const Cart = () => {
               {/* Botones de acción */}
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => {
-                    alert('¡Proceso de compra iniciado!');
-                    toggleCart();
-                  }} 
+                  onClick={handleCheckout} // 🔥 ACTUALIZADO
                   className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-2xl hover:scale-105 flex items-center justify-center gap-3"
                 >
                   <FaShoppingCart />
@@ -218,7 +242,7 @@ const Cart = () => {
                 
                 <div className="flex gap-2">
                   <button
-                    onClick={clearCart}
+                    onClick={handleClearCart} // 🔥 ACTUALIZADO
                     className="flex-1 bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 hover:border-red-300 font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
                   >
                     <FaTrash className="text-sm" />

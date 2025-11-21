@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaShoppingCart, FaTag, FaEye, FaStar, FaBolt } from 'react-icons/fa';
+import { useToast } from '../../context/ToastContext';
 
 const ProductCard = ({ product, onAddToCart }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showQuickView, setShowQuickView] = useState(false);
+  const toast = useToast();
 
   const {
     id,
@@ -15,7 +18,7 @@ const ProductCard = ({ product, onAddToCart }) => {
     inStock,
     discount,
     category,
-    isNewCollection // Nueva propiedad para Colección 2025
+    isNewCollection
   } = product;
 
   const finalPrice = discount > 0 ? price * (1 - discount / 100) : price;
@@ -23,8 +26,15 @@ const ProductCard = ({ product, onAddToCart }) => {
   const handleAddToCartClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onAddToCart && inStock) {
+    
+    if (!inStock) {
+      toast.outOfStock();
+      return;
+    }
+    
+    if (onAddToCart) {
       onAddToCart(product);
+      toast.addedToCart(name);
     }
   };
 
@@ -32,25 +42,48 @@ const ProductCard = ({ product, onAddToCart }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsFavorite(!isFavorite);
+    
+    if (!isFavorite) {
+      toast.addedToWishlist(name);
+    } else {
+      toast.info(`${name} eliminado de favoritos`);
+    }
+  };
+
+  const handleQuickViewClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Aquí puedes implementar la lógica para vista rápida
+    // Por ejemplo, abrir un modal o redirigir a la página del producto
+    window.location.href = `/product/${id}`;
   };
 
   return (
     <div 
       className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border-2 border-slate-100 hover:border-indigo-300"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        setShowQuickView(true);
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setShowQuickView(false);
+      }}
     >
-      <Link to={`/product/${id}`} className="block">
+      {/* Contenedor principal sin Link - usaremos botones para las acciones */}
+      <div className="block cursor-pointer">
         {/* Imagen del producto */}
         <div className="relative overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 h-80">
-          <img 
-            src={image} 
-            alt={name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-            onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&fit=crop';
-            }}
-          />
+          <Link to={`/product/${id}`} className="block h-full">
+            <img 
+              src={image} 
+              alt={name}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&fit=crop';
+              }}
+            />
+          </Link>
           
           {/* Overlay oscuro en hover */}
           <div className={`absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/20 to-transparent transition-opacity duration-300 ${
@@ -59,7 +92,6 @@ const ProductCard = ({ product, onAddToCart }) => {
           
           {/* Badges superiores */}
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-            {/* Badge Colección 2025 */}
             {isNewCollection && (
               <div className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5">
                 <FaBolt className="text-xs" />
@@ -67,7 +99,6 @@ const ProductCard = ({ product, onAddToCart }) => {
               </div>
             )}
             
-            {/* Badge Descuento */}
             {discount > 0 && (
               <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 animate-pulse">
                 <FaTag className="text-xs" />
@@ -75,7 +106,6 @@ const ProductCard = ({ product, onAddToCart }) => {
               </div>
             )}
             
-            {/* Badge Agotado */}
             {!inStock && (
               <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg">
                 Agotado
@@ -97,23 +127,22 @@ const ProductCard = ({ product, onAddToCart }) => {
             }`} />
           </button>
 
-          {/* Quick view en hover */}
+          {/* Quick view en hover - CORREGIDO: ahora es un botón, no un Link anidado */}
           <div className={`absolute inset-x-0 bottom-0 p-4 transform transition-all duration-300 ${
-            isHovered ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+            showQuickView ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
           }`}>
-            <Link
-              to={`/product/${id}`}
+            <button
+              onClick={handleQuickViewClick}
               className="w-full bg-white/95 backdrop-blur-md hover:bg-white text-slate-900 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xl border border-slate-200"
             >
               <FaEye />
               Vista Rápida
-            </Link>
+            </button>
           </div>
         </div>
 
-        {/* Información del producto */}
-        <div className="p-5">
-          {/* Categoría y Rating */}
+        {/* Información del producto - Envuelta en Link para navegación */}
+        <Link to={`/product/${id}`} className="block p-5 hover:no-underline">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-indigo-600 uppercase font-bold tracking-wider bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
               {category}
@@ -124,17 +153,14 @@ const ProductCard = ({ product, onAddToCart }) => {
             </div>
           </div>
 
-          {/* Nombre */}
           <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors min-h-[3.5rem]">
             {name}
           </h3>
 
-          {/* Descripción */}
           <p className="text-slate-600 text-sm mb-4 line-clamp-2 leading-relaxed">
             {description}
           </p>
 
-          {/* Precio */}
           <div className="flex items-end justify-between mb-4">
             <div>
               {discount > 0 ? (
@@ -158,10 +184,10 @@ const ProductCard = ({ product, onAddToCart }) => {
               </div>
             )}
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
 
-      {/* Botón de agregar al carrito */}
+      {/* Botón de agregar al carrito - Separado del contenido clickeable principal */}
       <div className="px-5 pb-5">
         <button
           onClick={handleAddToCartClick}
